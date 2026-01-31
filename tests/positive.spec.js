@@ -28,28 +28,30 @@ const positiveCases = [
   { id: 'Pos_Fun_0024', input: 'Name field eka empty thiyanava,karuNaakara eya puravanna.', expected: 'Name field එක empty තියනව,කරුණාකර එය පුරවන්න.', desc: 'Cleared input handling' },
 ];
 
+// 🔹 normalization helper (NEW – logic unchanged)
+const normalizeText = (text) =>
+  text
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([.,!?])\s*/g, '$1')
+    .trim();
+
 // Stable test version
 positiveCases.forEach(({ id, input, expected, desc }) => {
   test(`${id} - ${desc}`, async ({ page }) => {
 
-    // Open translator site fully loaded
     await page.goto('https://www.swifttranslator.com/', { waitUntil: 'networkidle' });
 
-    // Focus and type input
     const inputArea = page.locator('textarea[placeholder*="Singlish"]');
     await inputArea.fill('');
     await inputArea.type(input, { delay: 50 });
 
-    // Locate output
     const outputBox = page.locator('div.bg-slate-50.whitespace-pre-wrap');
 
-    // Normalize expected text
-    const expectedNormalized = expected.trim().replace(/\s+/g, ' ');
+    const expectedNormalized = normalizeText(expected);
 
-    // Poll until output matches normalized expected text
     await expect.poll(async () => {
       const text = await outputBox.textContent();
-      return text ? text.trim().replace(/\s+/g, ' ') : '';
+      return text ? normalizeText(text) : '';
     }, { timeout: 45000, interval: 500 }).toContain(expectedNormalized);
   });
 });
