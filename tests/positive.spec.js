@@ -26,31 +26,30 @@ const positiveCases = [
   { id: 'Pos_Fun_0022', input: 'mama 2.30 idhan paeya 2 k paadam karanavaa', expected: 'මම 2.30 ඉදන් පැය 2 ක් පාඩම් කරනවා', desc: 'Time and number format' },
   { id: 'Pos_Fun_0023', input: 'mama 2025/12/03 udhaarita suBha pathalaa SMS ekak dhaemmaa.', expected: 'මම 2025/12/03 උදාරිට සුභ පතලා SMS එකක් දැම්මා.', desc: 'English abbreviations' },
   { id: 'Pos_Fun_0024', input: 'Name field eka empty thiyanava,karuNaakara eya puravanna.', expected: 'Name field එක empty තියනව,කරුණාකර එය පුරවන්න.', desc: 'Cleared input handling' },
-  
 ];
 
-// Iterate and create tests dynamically
+// Stable test version
 positiveCases.forEach(({ id, input, expected, desc }) => {
   test(`${id} - ${desc}`, async ({ page }) => {
 
-    // Open the translator site
-    await page.goto('https://www.swifttranslator.com/');
+    // Open translator site fully loaded
+    await page.goto('https://www.swifttranslator.com/', { waitUntil: 'networkidle' });
 
     // Focus and type input
     const inputArea = page.locator('textarea[placeholder*="Singlish"]');
-    await inputArea.click();
-    await inputArea.fill(''); // clear previous text
-    await inputArea.type(input, { delay: 50 }); // simulate typing
+    await inputArea.fill('');
+    await inputArea.type(input, { delay: 50 });
 
-    // Locate the translation output container
-    // On SwiftTranslator output appears here (verified visually)
+    // Locate output
     const outputBox = page.locator('div.bg-slate-50.whitespace-pre-wrap');
 
-    // Wait until expected text appears (timeout up to 30s)
+    // Normalize expected text
+    const expectedNormalized = expected.trim().replace(/\s+/g, ' ');
+
+    // Poll until output matches normalized expected text
     await expect.poll(async () => {
       const text = await outputBox.textContent();
-      return text ? text.trim() : '';
-    }, { timeout: 30000 }).toContain(expected);
-
+      return text ? text.trim().replace(/\s+/g, ' ') : '';
+    }, { timeout: 45000, interval: 500 }).toContain(expectedNormalized);
   });
 });

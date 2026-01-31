@@ -17,23 +17,22 @@ const negativeCases = [
 negativeCases.forEach(({ id, input, expected, desc }) => {
   test(`${id} - ${desc}`, async ({ page }, testInfo) => {
 
-    // Open site
-    await page.goto('https://www.swifttranslator.com/');
+    // Open site fully loaded
+    await page.goto('https://www.swifttranslator.com/', { waitUntil: 'networkidle' });
 
     // Focus & type input
     const inputBox = page.locator('textarea[placeholder*="Singlish"]');
-    await inputBox.click();
     await inputBox.fill('');
     await inputBox.type(input, { delay: 50 });
 
-    // Output container
+    // Locate output
     const outputBox = page.locator('div.bg-slate-50.whitespace-pre-wrap');
 
-    // Wait until text appears (max 15s)
-    await page.waitForTimeout(2000);
-
-    // Get actual output
-    const actualOutput = (await outputBox.textContent())?.trim() || '';
+    // Poll to get actual output (handles slow rendering)
+    const actualOutput = await expect.poll(async () => {
+      const text = await outputBox.textContent();
+      return text ? text.trim().replace(/\s+/g, ' ') : '';
+    }, { timeout: 10000, interval: 500 });
 
     // Attach data to report
     testInfo.attach('Negative Test Data', {
@@ -41,7 +40,7 @@ negativeCases.forEach(({ id, input, expected, desc }) => {
       contentType: 'text/plain',
     });
 
-    // Negative assertion -> force fail if translator produces anything
-    expect(actualOutput).toBe(expected); // this will FAIL if output is not empty
+    // Negative assertion
+    expect(actualOutput).toBe(expected); // FAIL if translator produces anything
   });
 });
